@@ -1,0 +1,14 @@
+{
+    "name": "Clotho Evaluation",
+    "datasets": [
+        {
+            "name": "Clotho",
+            "splits": [
+                "test"
+            ],
+            "tasks": [
+                "caption"
+            ]
+        }
+    ]
+}

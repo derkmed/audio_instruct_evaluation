@@ -1,0 +1,11 @@
+torch
+transformers>=4.51.0
+datasets==3.6.0
+evaluate
+jiwer
+accelerate
+librosa
+soundfile
+bitsandbytes>=0.46.1
+qwen-omni-utils
+# flash-attn is optional; install separately with --no-build-isolation if needed
