@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "PowerShell(winget list git 2>$null; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\" -ErrorAction SilentlyContinue | Select-Object Name)",
-      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\" -ErrorAction SilentlyContinue | Select-Object Name)"
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell($git = \"C:\\\\Program Files\\\\Git\\\\cmd\\\\git.exe\"; & $git config --global user.email \"derekhmd@gmail.com\"; & $git config --global user.name \"derkmed\")",
+      "PowerShell($git = \"C:\\\\Program Files\\\\Git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\derek\\\\Desktop\\\\audio_instruct\"; & $git remote add origin https://github.com/derkmed/audio_instruct_evaluation; & $git branch -M main; & $git push -u origin main)",
+      "Bash(git -C \"c:/Users/derek/Desktop/audio_instruct\" status)",
+      "Bash(git -C \"c:/Users/derek/Desktop/audio_instruct\" diff colab_eval.ipynb)",
+      "Bash(git -C \"c:/Users/derek/Desktop/audio_instruct\" add colab_eval.ipynb)",
+      "Bash(git -C c:/Users/derek/Desktop/audio_instruct commit -m ' *)",
+      "Bash(git -C \"c:/Users/derek/Desktop/audio_instruct\" push origin main)"
     ]
   }
 }
