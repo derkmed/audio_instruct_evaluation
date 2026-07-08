@@ -66,7 +66,7 @@ but other tooling still in the HF repo imports them:
 
 | Helper module (HF repo) | Still imported by |
 | --- | --- |
-| `sample.py` | `gemini_prepare_data.py` |
+| `sample.py` | `filters.py` (a helper) |
 | `tasks.py` | `main.py`, `utils/json_config_loader.py`, and the other helpers |
 | `filters.py`, `internal_dataset.py`, `internal_datasets.py` | `utils/json_config_loader.py` |
 | `io_templates.py`, `prompts.py`, `json_config_loader.py` | the other helpers |
@@ -74,10 +74,11 @@ but other tooling still in the HF repo imports them:
 Delete these (and the empty `__init__.py`) only after that tooling is migrated to
 import from `uad_data` or removed.
 
-> Other tooling in the HF repo not touched by this migration: `gemini_inference.py`,
-> `gemini_prepare_data.py`, `token_counter.py`, `main.py`, `utils/`, `evaluation/`,
-> `report_scripts/`. Separate decision — note `utils/json_config_loader.py` is a
-> stale duplicate of the root `json_config_loader.py`.
+> Removed from the HF repo as unused (standalone GCP/Gemini scripts, nothing
+> imported them): `gemini_inference.py`, `gemini_prepare_data.py`, `token_counter.py`.
+> Still present in the HF repo, separate decision: `main.py`, `utils/`,
+> `evaluation/`, `report_scripts/` (which has its own `token_counter.py`); note
+> `utils/json_config_loader.py` is a stale duplicate of the root one.
 
 ## How to run
 
