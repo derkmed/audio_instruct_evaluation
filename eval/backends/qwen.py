@@ -7,7 +7,7 @@ import torch
 from transformers import Qwen3OmniMoeForConditionalGeneration, Qwen3OmniMoeProcessor
 from qwen_omni_utils import process_mm_info
 
-from config import EvalConfig
+from ..config import EvalConfig
 from .base import InferenceRequest, ModelBackend
 
 

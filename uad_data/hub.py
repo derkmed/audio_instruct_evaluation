@@ -1,0 +1,66 @@
+"""Fetch UAD dataset assets from the (private) HuggingFace Hub repo.
+
+This replaces the loading script's `dl_manager` downloads and the
+`_ensure_hub_resources()` shim. Everything here uses `huggingface_hub` to pull
+plain files -- there is no `trust_remote_code` and no executable dataset script
+on the Hub. Assets fetched: per-dataset audio archives (`data/<name>/<name>.tar.gz`),
+per-split metadata JSONs, prompt templates (`prompts/*.json`), and named configs
+(`universal_audio_dataset_configs/*.json`).
+"""
+import os
+
+from huggingface_hub import hf_hub_download, snapshot_download
+
+DEFAULT_REPO_ID = "AudioInstruct/Universal-Audio-Understanding"
+_RESOLVE_MARKER = "/resolve/"
+
+
+def to_repo_path(path_or_url: str) -> str:
+    """Normalise a data_url to a repo-relative path.
+
+    `InternalDataset` builds LFS-style absolute URLs of the form
+    `https://huggingface.co/datasets/<repo>/resolve/<rev>/<path>`. `hf_hub_download`
+    wants just `<path>`, so strip everything up to and including the revision.
+    Plain relative paths are returned unchanged (minus any leading slash).
+    """
+    # Hub paths always use forward slashes; guard against any OS-native separators
+    # that may have crept in via os.path.join upstream.
+    path_or_url = path_or_url.replace("\\", "/")
+    if _RESOLVE_MARKER in path_or_url:
+        after_resolve = path_or_url.split(_RESOLVE_MARKER, 1)[1]  # "<rev>/<path>"
+        return after_resolve.split("/", 1)[1]                     # "<path>"
+    return path_or_url.lstrip("/")
+
+
+def download_file(
+    path_or_url: str,
+    *,
+    repo_id: str = DEFAULT_REPO_ID,
+    revision: str | None = None,
+    token: str | None = None,
+) -> str:
+    """Download a single file from the dataset repo, returning its local path."""
+    return hf_hub_download(
+        repo_id=repo_id,
+        filename=to_repo_path(path_or_url),
+        repo_type="dataset",
+        revision=revision,
+        token=token,
+    )
+
+
+def download_prompts_dir(
+    *,
+    repo_id: str = DEFAULT_REPO_ID,
+    revision: str | None = None,
+    token: str | None = None,
+) -> str:
+    """Snapshot the repo's `prompts/` folder and return the local prompts directory."""
+    local_repo = snapshot_download(
+        repo_id=repo_id,
+        repo_type="dataset",
+        revision=revision,
+        token=token,
+        allow_patterns="prompts/*",
+    )
+    return os.path.join(local_repo, "prompts")

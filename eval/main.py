@@ -1,13 +1,22 @@
-"""CLI entry point for audio instruction evaluation."""
+"""CLI entry point for audio instruction evaluation.
+
+Run from the repo root as a module:
+
+    python -m eval.main --model GEMMA-4 --json-config clotho_config.json --split test
+
+Flow: parse flags into an `EvalConfig`, build the chosen model backend, load the
+requested dataset slice via `uad_data.load_uad_dataset` (which fetches audio +
+metadata + prompts from the private HF Hub repo -- no loading script), then run
+batched inference through the `Evaluator` and print/save metrics.
+"""
 
 import argparse
 import os
 
-from datasets import load_dataset
-
-from backends import GemmaBackend, QwenBackend
-from config import DEFAULT_MODEL_PATHS, EvalConfig
-from evaluator import Evaluator
+from .backends import GemmaBackend, QwenBackend
+from .config import DEFAULT_MODEL_PATHS, EvalConfig
+from .evaluator import Evaluator
+from uad_data import load_uad_dataset
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -92,12 +101,12 @@ def main() -> None:
     backend = backend_cls(config)
 
     print(f"Loading dataset: {config.dataset_name} (split={config.dataset_split})")
-    dataset = load_dataset(
-        config.dataset_name,
-        split=config.dataset_split,
+    dataset = load_uad_dataset(
         json_config_path=config.json_config_path,
-        trust_remote_code=True,
+        split=config.dataset_split,
+        repo_id=config.dataset_name,
         token=hf_token,
+        max_samples=config.max_samples,
     )
     print(f"Dataset loaded: {len(dataset)} samples")
 

@@ -3,7 +3,7 @@ from typing import List
 import torch
 from transformers import AutoModelForCausalLM, AutoProcessor
 
-from config import EvalConfig
+from ..config import EvalConfig
 from .base import InferenceRequest, ModelBackend
 
 

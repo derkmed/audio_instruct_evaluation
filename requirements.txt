@@ -1,6 +1,8 @@
 torch
 transformers>=4.51.0
 datasets==3.6.0
+huggingface_hub
+jinja2
 evaluate
 jiwer
 accelerate

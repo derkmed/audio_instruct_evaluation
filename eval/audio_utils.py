@@ -1,3 +1,9 @@
+"""Audio preprocessing shared by the model backends.
+
+Turns the raw audio bytes carried on each dataset row into the normalized
+float32 mono array the backends feed to their processors. Run in parallel across
+a batch by the `Evaluator`.
+"""
 import io
 
 import librosa

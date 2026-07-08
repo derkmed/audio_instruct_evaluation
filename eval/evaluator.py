@@ -6,9 +6,9 @@ from typing import List
 
 import evaluate as hf_evaluate
 
-from audio_utils import preprocess_audio
-from backends.base import InferenceRequest, ModelBackend
-from config import EvalConfig
+from .audio_utils import preprocess_audio
+from .backends.base import InferenceRequest, ModelBackend
+from .config import EvalConfig
 
 
 def _batched(iterable, n: int):
@@ -78,6 +78,8 @@ class Evaluator:
                         if jsonl_file:
                             record = {
                                 "index": n - 1,
+                                "model_choice": self.config.model_choice,
+                                "model": self.config.resolved_model_path,
                                 "dataset": self.config.dataset_name,
                                 "split": self.config.dataset_split,
                                 "task": req.task,
@@ -97,7 +99,12 @@ class Evaluator:
 
         if self.config.output_dir:
             summary_path = os.path.join(self.config.output_dir, "summary.json")
-            summary = {"wer": results["wer"], "num_samples": results["num_samples"]}
+            summary = {
+                "model_choice": self.config.model_choice,
+                "model": self.config.resolved_model_path,
+                "wer": results["wer"],
+                "num_samples": results["num_samples"],
+            }
             with open(summary_path, "w", encoding="utf-8") as f:
                 json.dump(summary, f, indent=2)
             print(f"Results saved → {self.config.output_dir}/")
