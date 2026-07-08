@@ -49,6 +49,32 @@ def download_file(
     )
 
 
+def open_archive_stream(
+    path_or_url: str,
+    *,
+    repo_id: str = DEFAULT_REPO_ID,
+    revision: str | None = None,
+    token: str | None = None,
+):
+    """Open a repo file as a lazily-read, range-request-backed binary stream.
+
+    Unlike `download_file` (which fetches the whole file into the local HF cache),
+    this returns an `HfFileSystem` file object that only transfers the bytes that
+    are actually read. Feeding it to `tarfile.open(fileobj=..., mode="r|gz")` and
+    stopping early therefore downloads just the compressed prefix of the archive --
+    useful with `max_samples`. Trade-off: nothing is cached, so full/repeat reads
+    are better served by `download_file`.
+    """
+    from huggingface_hub import HfFileSystem
+
+    rel = to_repo_path(path_or_url)
+    hf_path = (
+        f"datasets/{repo_id}@{revision}/{rel}" if revision
+        else f"datasets/{repo_id}/{rel}"
+    )
+    return HfFileSystem(token=token).open(hf_path, "rb")
+
+
 def download_prompts_dir(
     *,
     repo_id: str = DEFAULT_REPO_ID,

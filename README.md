@@ -42,7 +42,9 @@ rows = load_uad_dataset(
     split="test",
     repo_id="AudioInstruct/Universal-Audio-Understanding",
     token="hf_...",           # private dataset
-    max_samples=None,
+    max_samples=None,         # cap the number of rows; stops iterating early
+    # stream=None,            # lazily stream archives (auto-on when max_samples set) so a
+    #                         # small cap downloads only the archive prefix, not the whole tar
 )
 # each row: audio (bytes), system_instruction, prompt, output, task, originating_dataset, split
 ```

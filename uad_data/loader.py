@@ -7,10 +7,16 @@ system_instruction, prompt, output, task, split, originating_dataset, plus the
 per-task metadata fields) -- so the downstream Evaluator is unchanged.
 
 Pipeline per selected internal dataset + split:
-  1. download the audio archive and the split metadata JSON from the Hub,
+  1. obtain the audio archive and the split metadata JSON from the Hub,
   2. stream the tar archive, looking up each member's metadata by audio_path,
   3. for every (task, prompt-template) combination, build a Sample and emit its row.
+
+The archive is read one of two ways (see `_open_archive`): fully downloaded and
+cached via `hub.download_file` (default), or lazily streamed via
+`hub.open_archive_stream` so that stopping early (with `max_samples`) only
+transfers the compressed prefix of the archive.
 """
+import contextlib
 import glob
 import json
 import tarfile
@@ -54,6 +60,29 @@ def _get_prompt_templates(task: Task, randomize: bool):
     return task_prompt_file.all_templates
 
 
+@contextlib.contextmanager
+def _open_archive(data_url: str, *, stream: bool, repo_id: str, revision, token):
+    """Yield a streaming tar handle for an internal dataset's audio archive.
+
+    stream=False downloads (and caches) the whole `.tar.gz` first; stream=True
+    reads it lazily over HTTP so an early break transfers only the prefix consumed.
+    Either way the caller gets a sequential `r|gz` tar object.
+    """
+    if stream:
+        fileobj = hub.open_archive_stream(
+            data_url, repo_id=repo_id, revision=revision, token=token)
+        try:
+            with tarfile.open(fileobj=fileobj, mode="r|gz") as archive:
+                yield archive
+        finally:
+            fileobj.close()
+    else:
+        tar_path = hub.download_file(
+            data_url, repo_id=repo_id, revision=revision, token=token)
+        with tarfile.open(tar_path, "r|gz") as archive:
+            yield archive
+
+
 def iter_samples(
     collection: UadCollection,
     split,
@@ -62,20 +91,23 @@ def iter_samples(
     revision: str | None,
     token: str | None,
     max_samples: int | None = None,
+    stream: bool = False,
 ) -> Iterator[dict[str, Any]]:
     """Yield expanded row dicts for one split across the collection's datasets."""
     count = 0
     randomize = collection.is_random_prompt_format_selection()
     for internal_dataset in collection.get_datasets_with_splits(split):
-        tar_path = hub.download_file(
-            internal_dataset.data_url, repo_id=repo_id, revision=revision, token=token)
         metadata_path = hub.download_file(
             internal_dataset.split_metadata_path(split),
             repo_id=repo_id, revision=revision, token=token)
         metadata = _load_split_metadata(metadata_path, internal_dataset.tasks, split)
 
-        # Stream the archive rather than extracting it wholesale (archives are multi-GB).
-        with tarfile.open(tar_path, "r|gz") as archive:
+        # Read the archive as a sequential stream (archives are multi-GB); with
+        # stream=True only the prefix up to the early-stop point is downloaded.
+        with _open_archive(
+            internal_dataset.data_url, stream=stream,
+            repo_id=repo_id, revision=revision, token=token,
+        ) as archive:
             for member in archive:
                 if not member.isfile():
                     continue
@@ -115,6 +147,7 @@ def load_uad_dataset(
     revision: str | None = None,
     token: str | None = None,
     max_samples: int | None = None,
+    stream: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Load and expand the UAD dataset for a given config + split.
 
@@ -125,11 +158,19 @@ def load_uad_dataset(
         repo_id: HF Hub dataset repo id (private).
         revision: Optional Hub revision/commit to pin for reproducibility.
         token: HF access token (required for the private repo).
-        max_samples: Optional cap on the number of rows (stops streaming early).
+        max_samples: Optional cap on the number of rows (stops iterating early).
+        stream: Read audio archives lazily over HTTP instead of downloading them
+            in full, so an early stop transfers only the prefix consumed. Defaults
+            to True when `max_samples` is set (the debugging/smoke-test case) and
+            False otherwise -- full runs prefer the cached download. Streamed reads
+            are not cached, so avoid stream=True for large or repeated runs.
 
     Returns:
         A list of row dicts consumable directly by the Evaluator.
     """
+    if stream is None:
+        stream = max_samples is not None
+
     config_path = _resolve_config_path(
         json_config_path, repo_id=repo_id, revision=revision, token=token)
 
@@ -141,7 +182,8 @@ def load_uad_dataset(
     split_key = datasets.Split(split) if isinstance(split, str) else split
     return list(iter_samples(
         collection, split_key,
-        repo_id=repo_id, revision=revision, token=token, max_samples=max_samples))
+        repo_id=repo_id, revision=revision, token=token,
+        max_samples=max_samples, stream=stream))
 
 
 def _resolve_config_path(

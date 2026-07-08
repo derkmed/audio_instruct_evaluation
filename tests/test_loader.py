@@ -142,5 +142,45 @@ def run() -> None:
     print("PASS: load_uad_dataset produced 4 correctly-expanded, independent rows.")
 
 
+def run_streaming() -> None:
+    """max_samples auto-enables the streaming archive path and stops early."""
+    with tempfile.TemporaryDirectory() as root:
+        fx = _build_fixture(root)
+        _install_fakes(fx)
+
+        calls = {"stream": 0, "download_tar": 0}
+
+        def fake_open_archive_stream(path_or_url, *, repo_id=None, revision=None, token=None):
+            calls["stream"] += 1
+            return open(fx["tar_path"], "rb")
+
+        # Detect any full-download of the archive so we can prove it was NOT used.
+        prev_download_file = hub.download_file
+
+        def counting_download_file(path_or_url, *, repo_id=None, revision=None, token=None):
+            if os.path.basename(hub.to_repo_path(path_or_url)).endswith(".tar.gz"):
+                calls["download_tar"] += 1
+            return prev_download_file(path_or_url, repo_id=repo_id, revision=revision, token=token)
+
+        hub.open_archive_stream = fake_open_archive_stream
+        hub.download_file = counting_download_file
+
+        # max_samples set -> stream defaults to True.
+        rows = loader.load_uad_dataset(
+            json_config_path=fx["config_path"],
+            split="test",
+            token=None,
+            max_samples=1,
+        )
+
+    assert len(rows) == 1, f"expected 1 row (capped), got {len(rows)}"
+    assert calls["stream"] == 1, "streaming archive opener was not used"
+    assert calls["download_tar"] == 0, "archive was fully downloaded despite streaming"
+    r = rows[0]
+    assert r["task"] == "caption" and r["caption"] in r["output"], r
+    print("PASS: streaming path honored max_samples and avoided the full archive download.")
+
+
 if __name__ == "__main__":
     run()
+    run_streaming()
