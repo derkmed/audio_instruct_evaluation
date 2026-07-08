@@ -22,6 +22,36 @@ tests/        # offline tests
 Both `eval/` and `train/` consume the same `uad_data` loader, so evaluation and
 training see identical rows.
 
+## How it fits together
+
+```mermaid
+flowchart LR
+    subgraph HUB["HF Hub (private, data-only)<br/>AudioInstruct/Universal-Audio-Understanding"]
+        DATA["data/&lt;name&gt;/&lt;name&gt;.tar.gz<br/>+ per-split metadata JSON"]
+        PROMPTS["prompts/*.json<br/>(jinja2 templates)"]
+        CONFIGS["universal_audio_dataset_configs/"]
+    end
+
+    subgraph REPO["this repo (code)"]
+        UAD["uad_data<br/>load_uad_dataset()"]
+        EVAL["eval/<br/>python -m eval.main"]
+        TRAIN["train/<br/>python -m train.main"]
+    end
+
+    DATA -- "hf_hub_download,<br/>or lazy stream when max_samples" --> UAD
+    PROMPTS --> UAD
+    CONFIGS --> UAD
+    UAD -- "rows: audio bytes +<br/>system_instruction / prompt / output" --> EVAL
+    UAD -- "same rows" --> TRAIN
+    EVAL --> METRICS["WER + results.jsonl<br/>+ summary.json"]
+    TRAIN --> ADAPTER["LoRA adapter / weights<br/>(output_dir)"]
+    ADAPTER -. "merge, then<br/>--model-path" .-> EVAL
+```
+
+No code is downloaded or executed from the Hub (`trust_remote_code` is gone);
+`uad_data` fetches only plain data files and expands each audio clip into
+`(task × prompt-template)` rows locally.
+
 ## Quickstart (evaluation)
 
 ```bash
