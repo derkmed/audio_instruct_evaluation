@@ -14,7 +14,7 @@ The dataset itself lives in a separate, private HuggingFace repo
 ```
 uad_data/     # shared dataset library: load_uad_dataset() downloads + expands rows
 eval/         # evaluation harness (batched inference + metrics)   -> python -m eval.main
-train/        # finetuning / QLoRA (scaffold)                       -> python -m train.finetune_qlora
+train/        # QLoRA finetuning via HF Trainer                     -> python -m train.main
 configs/      # dataset run configs (which datasets/tasks/splits)   e.g. clotho_config.json
 tests/        # offline tests
 ```
@@ -51,9 +51,14 @@ rows = load_uad_dataset(
 
 ## Finetuning
 
-See [`train/README.md`](./train/README.md). Scaffold in place; data loading is wired
-up, model/QLoRA/trainer are TODO (reference:
-https://ai.google.dev/gemma/docs/core/huggingface_text_finetune_qlora).
+```bash
+pip install -r requirements.txt -r train/requirements.txt
+python -m train.main --model GEMMA-4 --json-config configs/clotho_config.json --split train
+```
+
+QLoRA (4-bit NF4 + LoRA adapters) through the HF `Trainer`, with one training
+backend per model (Gemma, Qwen3-Omni) mirroring the eval backends. See
+[`train/README.md`](./train/README.md).
 
 ## Tests
 
