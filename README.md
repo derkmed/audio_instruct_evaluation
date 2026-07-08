@@ -56,9 +56,10 @@ pip install -r requirements.txt -r train/requirements.txt
 python -m train.main --model GEMMA-4 --json-config configs/clotho_config.json --split train
 ```
 
-QLoRA (4-bit NF4 + LoRA adapters) through the HF `Trainer`, with one training
-backend per model (Gemma, Qwen3-Omni) mirroring the eval backends. See
-[`train/README.md`](./train/README.md).
+HF `Trainer`-based, one training backend per model (Gemma, Qwen3-Omni)
+mirroring the eval backends. Three modes: QLoRA (default), LoRA on a bf16 base
+(`--no-4bit`), full finetune (`--no-4bit --no-lora`). **Full guide:
+[`FINETUNING.md`](./FINETUNING.md).**
 
 ## Tests
 
